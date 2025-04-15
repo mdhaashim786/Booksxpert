@@ -8,7 +8,9 @@
 import SwiftUI
 
 @main
-struct BookxpertAppApp: App {
+struct BookxpertApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    
     let persistenceController = PersistenceController.shared
 
     var body: some Scene {
