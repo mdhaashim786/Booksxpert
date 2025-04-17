@@ -16,6 +16,8 @@ class LoginViewModel: ObservableObject {
     @Published var userprofile: UserProfile?
     @Published var isSignedIn: Bool = false
     
+    let pdfUrl: String = "https://fssservices.bookxpert.co/GeneratedPDF/Companies/nadc/2024-2025/BalanceSheet.pdf"
+    
     private var context: NSManagedObjectContext?
     
     func setContext(_ context: NSManagedObjectContext) {

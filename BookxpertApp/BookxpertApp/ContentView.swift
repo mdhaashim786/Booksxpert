@@ -15,14 +15,28 @@ struct ContentView: View {
     var body: some View {
         VStack {
             if viewModel.isSignedIn {
-                //NavigationView {
-                VStack {
-                    Text("Welcome to the app")
-                    Button(action: {
-                        viewModel.signOut()
-                    }, label: {
-                        Text("Signout")
-                    })
+                NavigationStack {
+                    VStack {
+                        Text("Welcome to the app")
+                        Button(action: {
+                            viewModel.signOut()
+                        }, label: {
+                            Text("Signout")
+                        })
+                        
+                        if let pdfURL = URL(string: viewModel.pdfUrl) {
+                            NavigationLink(destination: PDFKitView(url: pdfURL)) {
+                                Image(systemName: "square.text.square")
+                                    .resizable()
+                                    .frame(width: 50, height: 50)
+                                    .foregroundStyle(.blue)
+                            }
+                        } else {
+                            Text("Invalid PDF URL")
+                                .foregroundColor(.gray)
+                        }
+
+                    }
                     
                 }
             } else {
