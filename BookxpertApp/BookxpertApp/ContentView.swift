@@ -115,7 +115,11 @@ struct ContentView: View {
             viewModel.saveImage(imageData: newImage?.jpegData(compressionQuality: 1.0))
             
         })
-        
+        .onChange(of: viewModel.isSignedIn, { _, newValue in
+            if newValue {
+                viewModel.fetchStoredObjects()
+            }
+        })
         .onAppear {
             viewModel.setContext(viewContext)
         }
