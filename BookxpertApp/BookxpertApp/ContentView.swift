@@ -22,7 +22,21 @@ struct ContentView: View {
             if viewModel.isSignedIn {
                 NavigationStack {
                     VStack {
-                        Text("Welcome \(viewModel.userName) to the app")
+                        Text("Welcome to the app \(viewModel.userName)")
+                        
+                        List {
+                            ForEach(viewModel.storedObjects, id: \.id) { item in
+                                HStack {
+                                    Text(item.name ?? "")
+                                    if let capacity = item.data?.capacity {
+                                        Text("capacity : \(capacity)")
+                                    }
+                                }
+                                
+                            }
+                            .onDelete(perform: viewModel.deleteItems)
+                        }
+                        
                         
                         VStack {
                             if let image = selectedImage {
