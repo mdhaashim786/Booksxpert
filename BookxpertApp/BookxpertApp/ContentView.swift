@@ -24,19 +24,24 @@ struct ContentView: View {
                     VStack {
                         Text("Welcome to the app \(viewModel.userName)")
                         
-                        List {
-                            ForEach(viewModel.storedObjects, id: \.id) { item in
-                                HStack {
-                                    Text(item.name ?? "")
-                                    if let capacity = item.data?.capacity {
-                                        Text("capacity : \(capacity)")
+                        if let error = viewModel.isFetchingObjects.1 {
+                            Text("Server error while fetching the objects. No objects to show")
+                                .multilineTextAlignment(.center)
+                            
+                        } else {
+                            List {
+                                ForEach(viewModel.storedObjects, id: \.id) { item in
+                                    HStack {
+                                        Text(item.name ?? "")
+                                        if let capacity = item.data?.capacity {
+                                            Text("capacity : \(capacity)")
+                                        }
                                     }
+                                    
                                 }
-                                
+                                .onDelete(perform: viewModel.deleteItems)
                             }
-                            .onDelete(perform: viewModel.deleteItems)
                         }
-                        
                         
                         VStack {
                             if let image = selectedImage {
