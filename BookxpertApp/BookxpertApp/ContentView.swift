@@ -126,6 +126,7 @@ struct ContentView: View {
             }
         })
         .onAppear {
+            viewModel.askNotificationPermissions()
             viewModel.setContext(viewContext)
         }
     }

@@ -24,6 +24,17 @@ class MyViewModel: ObservableObject {
     private var context: NSManagedObjectContext?
     @Published var storedObjects: [PersistentResponse] = []
     
+    
+    func askNotificationPermissions() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if granted {
+                print("Permission granted.")
+            } else {
+                print("Permission denied.")
+            }
+        }
+    }
+    
     func fetchObjectsFromApi(context: NSManagedObjectContext) {
         Task {
             let urlRequest = URLRequest(url: URL(string: objectsUrl)!)
@@ -126,21 +137,40 @@ class MyViewModel: ObservableObject {
            return
        }
        
+       var deletingObjectName: String = ""
+       
         withAnimation {
             for index in offsets {
                 let objectToDelete = storedObjects[index]
+                deletingObjectName = objectToDelete.name ?? ""
                 context.delete(objectToDelete)
             }
             
             do {
                 try context.save()
+                sendNotification(title: "Deleting object", subTitle: deletingObjectName)
             } catch {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                let nsError = error as NSError
-                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+                print("❌ Failed to delete objects: \(error)")
             }
         }
+    }
+    
+    func sendNotification(title: String, subTitle: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = subTitle
+        content.sound = UNNotificationSound.default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("Error scheduling notification: \(error)")
+            } else {
+                print("Notification scheduled!")
+            }
+        }
+
+
     }
     
     var userPhoto: Image? {
