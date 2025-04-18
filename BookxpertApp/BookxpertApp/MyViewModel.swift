@@ -15,10 +15,133 @@ class MyViewModel: ObservableObject {
     // Just added to store userProfile
     @Published var userprofile: UserProfile?
     @Published var isSignedIn: Bool = false
+    @Published var isFetchingObjects: (Bool,Error?) = (true, nil)
     
     let pdfUrl: String = "https://fssservices.bookxpert.co/GeneratedPDF/Companies/nadc/2024-2025/BalanceSheet.pdf"
+    let objectsUrl: String = "https://api.restful-api.dev/objects"
+    
     
     private var context: NSManagedObjectContext?
+    @Published var storedObjects: [PersistentResponse] = []
+    
+    func fetchObjectsFromApi(context: NSManagedObjectContext) {
+        Task {
+            let urlRequest = URLRequest(url: URL(string: objectsUrl)!)
+            do {
+                let (data, _) = try await  URLSession.shared.data(for: urlRequest)
+                print(data)
+                let decodedData = try JSONDecoder().decode([ObjectsResponse].self, from: data)
+                DispatchQueue.main.async {
+                    self.isFetchingObjects = (false, nil)
+                    self.saveObjectResponse(decodedData, context: context)
+                }
+                print("✅ Stored objects fetched from api")
+            } catch {
+                DispatchQueue.main.async {
+                    self.isFetchingObjects = (false, error)
+                }
+                print("Network error - \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    func saveObjectResponse(_ objects: [ObjectsResponse], context: NSManagedObjectContext) {
+        for object in objects {
+            
+            let storedObject = PersistentResponse(context: context)
+            storedObject.id = object.id
+            storedObject.name = object.name
+            
+            if let data = object.data {
+                let storedData = MyData(context: context)
+                storedData.color = data.color
+                storedData.capacity = data.capacity
+                storedData.generation = data.generation
+                storedData.price = data.price
+                storedData.screenSize = data.screenSize
+                storedData.desc = data.description
+                storedData.strapColor = data.strapColor
+                storedData.caseSize = data.caseSize
+                storedData.capacitygb = data.capacitygb
+                storedData.year = data.year
+                storedData.cpuModel = data.cpuModel
+                storedData.hardDiskSize = data.hardDiskSize
+                
+                storedObject.data = storedData
+            }
+            
+            storedObjects.append(storedObject)
+        }
+
+        do {
+            try context.save()
+            print("✅ Saved to Core Data")
+        } catch {
+            print("❌ Failed to save: \(error)")
+        }
+    }
+    
+    func fetchStoredObjects() {
+        guard let context else {
+            print("Context not set")
+            return
+        }
+        
+        let fetchRequest: NSFetchRequest<PersistentResponse> = PersistentResponse.fetchRequest()
+        let sortDescriptor = NSSortDescriptor(keyPath: \PersistentResponse.name, ascending: true)
+            fetchRequest.sortDescriptors = [sortDescriptor]
+            
+            do {
+                storedObjects = try context.fetch(fetchRequest)
+                let isStoredObjectsEmpty = storedObjects.isEmpty
+                print("✅ Stored ojects fetched from Core Data is \(isStoredObjectsEmpty ? "empty": "not empty")")
+                if isStoredObjectsEmpty {
+                    self.fetchObjectsFromApi(context: context)
+                }
+            } catch {
+                print("❌ Failed to fetch objects: \(error)")
+            }
+        }
+    
+    func deleteAllObjects(context: NSManagedObjectContext) {
+        
+        let fetchRequest: NSFetchRequest<PersistentResponse> = PersistentResponse.fetchRequest()
+
+        do {
+            let results = try context.fetch(fetchRequest)
+            for object in results {
+                context.delete(object)
+            }
+            try context.save()
+            print("✅ All objects deleted")
+        } catch {
+            print("❌ Failed to delete objects: \(error)")
+        }
+    }
+
+    
+   func deleteItems(offsets: IndexSet) {
+       guard let context else {
+           print("Context not set")
+           return
+       }
+       
+        withAnimation {
+            for index in offsets {
+                let objectToDelete = storedObjects[index]
+                context.delete(objectToDelete)
+            }
+            
+            do {
+                try context.save()
+            } catch {
+                // Replace this implementation with code to handle the error appropriately.
+                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
+                let nsError = error as NSError
+                fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
+            }
+        }
+    }
     
     var userPhoto: Image? {
         if let imageData = userprofile?.imageUrl,
@@ -97,6 +220,8 @@ class MyViewModel: ObservableObject {
         } catch {
             print("Failed to delete user from Core Data: \(error.localizedDescription)")
         }
+        
+        deleteAllObjects(context: context)
         
         // 4. Update UI state
         DispatchQueue.main.async {
