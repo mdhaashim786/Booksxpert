@@ -20,6 +20,19 @@ class LoginViewModel: ObservableObject {
     
     private var context: NSManagedObjectContext?
     
+    var userPhoto: Image? {
+        if let imageData = userprofile?.imageUrl,
+           let uiImage = UIImage(data: imageData) {
+            return Image(uiImage: uiImage)
+            
+        }
+        return nil
+    }
+    
+    var userName: String {
+        userprofile?.name ?? ""
+    }
+    
     func setContext(_ context: NSManagedObjectContext) {
         self.context = context
         self.isSignedIn = Auth.auth().currentUser != nil
@@ -53,7 +66,9 @@ class LoginViewModel: ObservableObject {
                     print("Successfully signed in")
                     
                     self.isSignedIn = true
-                    self.saveData(userData: user)
+                    Task {
+                        await self.saveData(userData: user)
+                    }
                 }
             }
         }
@@ -89,23 +104,49 @@ class LoginViewModel: ObservableObject {
         }
     }
     
-    private func saveData(userData: GIDGoogleUser) {
-        withAnimation {
+    private func saveData(userData: GIDGoogleUser) async {
+        Task {
             if let context = context {
                 let userProfile = UserProfile(context: context)
                 userProfile.email = userData.profile?.email
                 userProfile.name = userData.profile?.name
                 userProfile.userId = UUID(uuidString: userData.userID ?? "")
                 userProfile.givenName = userData.profile?.givenName
-                userProfile.imageUrl = userData.profile?.imageURL(withDimension: 200)?.absoluteString
-                
-                self.userprofile = userProfile
+                if let imageUrl = userData.profile?.imageURL(withDimension: 200) {
+                    do {
+                        let (data, _) = try await URLSession.shared.data(from: imageUrl)
+                        userProfile.imageUrl = data
+                    } catch {
+                        print("Error loading image: \(error.localizedDescription)")
+                    }
+                }
+                DispatchQueue.main.async { [weak self] in
+                    guard let `self` = self else { return }
+                    self.userprofile = userProfile
+                }
                 do {
                     try context.save()
                 } catch {
                     print("Error occured \(error)")
                 }
             }
+        }
+    }
+    
+    func saveImage(imageData: Data?) {
+        guard let context else {
+            print("Context not set")
+            return
+        }
+        let request: NSFetchRequest<UserProfile> = UserProfile.fetchRequest()
+        request.sortDescriptors = []
+        
+        do {
+            let profileToUpdate = try context.fetch(request).first
+            profileToUpdate?.imageUrl = imageData
+            try context.save()
+        } catch {
+            print("Failed to fetch users: \(error)")
         }
     }
     
