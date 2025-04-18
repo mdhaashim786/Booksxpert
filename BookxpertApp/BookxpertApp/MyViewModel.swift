@@ -10,7 +10,7 @@ import CoreData
 import FirebaseAuth
 import GoogleSignIn
 
-class LoginViewModel: ObservableObject {
+class MyViewModel: ObservableObject {
     
     // Just added to store userProfile
     @Published var userprofile: UserProfile?

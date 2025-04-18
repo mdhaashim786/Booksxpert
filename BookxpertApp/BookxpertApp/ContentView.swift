@@ -10,7 +10,7 @@ import GoogleSignInSwift
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
-    @StateObject var viewModel = LoginViewModel()
+    @StateObject var viewModel = MyViewModel()
     
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
