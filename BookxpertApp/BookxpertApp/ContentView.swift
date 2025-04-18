@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import GoogleSignInSwift
 
 struct ContentView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -16,6 +15,7 @@ struct ContentView: View {
     @State private var selectedImage: UIImage?
     @State private var sourceType: UIImagePickerController.SourceType = .photoLibrary
     @State private var showSourceOptions = false
+    @State private var isLoading = false
     
     var body: some View {
         VStack {
@@ -148,13 +148,28 @@ struct ContentView: View {
                 }
                 
             } else {
-                GoogleSignInButton {
-                    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                       let presentingVC = windowScene.windows.first?.rootViewController  {
-                        viewModel.signInWithGoogle(presentingVC: presentingVC)
-                    }
+                VStack(spacing: 32) {
+                    
+                    Text("Bookxpert")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundColor(Color(red: 0, green: 149/255, blue: 215/255))
+                        .shadow(radius: 6)
+                    
+                    Text("Your Accounting partner")
+                        .font(.headline)
+                        .foregroundColor(.white.opacity(0.85))
+                    GoogleSignInButton(action: {
+                        isLoading = true
+                        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                           let presentingVC = windowScene.windows.first?.rootViewController {
+                            viewModel.signInWithGoogle(presentingVC: presentingVC)
+                        }
+
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            isLoading = false
+                        }
+                    }, isLoading: isLoading)
                 }
-                .frame(width: 200, height: 50)
             }
         }
         .sheet(isPresented: $showImagePicker) {
@@ -173,5 +188,43 @@ struct ContentView: View {
             viewModel.askNotificationPermissions()
             viewModel.setContext(viewContext)
         }
+    }
+}
+
+
+struct GoogleSignInButton: View {
+    var action: () -> Void
+    var isLoading: Bool = false
+    
+    var body: some View {
+        Button(action: {
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            action()
+        }) {
+            HStack(spacing: 12) {
+                Image(systemName: "globe")
+                    .resizable()
+                    .frame(width: 20, height: 20)
+                    .foregroundColor(.white)
+                
+                Text("Sign in with Google")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+            .padding()
+            .frame(width: 250, height: 50)
+            .background(LinearGradient(colors: [Color.orange, Color.pink], startPoint: .leading, endPoint: .trailing))
+            .cornerRadius(14)
+            .shadow(radius: 5)
+        }
+        .overlay(
+            Group {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                }
+            }
+        )
+        .disabled(isLoading)
     }
 }
