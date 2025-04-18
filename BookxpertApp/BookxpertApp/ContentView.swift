@@ -21,88 +21,132 @@ struct ContentView: View {
         VStack {
             if viewModel.isSignedIn {
                 NavigationStack {
-                    VStack {
-                        Text("Welcome to the app \(viewModel.userName)")
-                        
-                        if let error = viewModel.isFetchingObjects.1 {
-                            Text("Server error while fetching the objects. No objects to show")
-                                .multilineTextAlignment(.center)
-                            
-                        } else {
-                            List {
-                                ForEach(viewModel.storedObjects, id: \.id) { item in
-                                    HStack {
-                                        Text(item.name ?? "")
-                                        if let capacity = item.data?.capacity {
-                                            Text("capacity : \(capacity)")
-                                        }
-                                    }
-                                    
-                                }
-                                .onDelete(perform: viewModel.deleteItems)
-                            }
-                        }
-                        
-                        VStack {
-                            if let image = selectedImage {
-                                Image(uiImage: image)
-                                    .resizable()
+                    ScrollView {
+                        VStack(spacing: 24) {
+                            // Welcome Header
+                            VStack(spacing: 4) {
+                                Text("Welcome")
+                                    .font(.largeTitle)
+                                    .bold()
                                 
-                            } else {
-                                if let photo = viewModel.userPhoto {
+                                Text(viewModel.userName)
+                                    .font(.title3)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.top)
+                            
+                            // Profile Image
+                            ZStack {
+                                if let image = selectedImage {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                } else if let photo = viewModel.userPhoto {
                                     photo
                                         .resizable()
+                                } else {
+                                    Image(systemName: "person.circle.fill")
+                                        .resizable()
+                                        .foregroundColor(.gray.opacity(0.5))
                                 }
                             }
-                        }
-                        .frame(width: 200, height: 200)
-                        .clipShape(Circle())
-                        
-                        Button(action: {
-                            showSourceOptions = true
-                        }) {
-                            Label("Change profile photo", systemImage: "photo")
-                                .font(.headline)
-                                .padding()
-                                .background(Color.blue)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                        }
-                        .confirmationDialog("Choose Image Source", isPresented: $showSourceOptions, titleVisibility: .visible) {
-                            if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                                Button("Camera") {
-                                    sourceType = .camera
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 150, height: 150)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(Color.blue, lineWidth: 2))
+                            .shadow(radius: 4)
+                            
+                            // Change Photo Button
+                            Button {
+                                showSourceOptions = true
+                            } label: {
+                                Label("Change Profile Photo", systemImage: "photo")
+                                    .font(.headline)
+                                    .padding(.vertical, 10)
+                                    .padding(.horizontal, 20)
+                                    .background(Color.blue)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                            }
+                            .confirmationDialog("Choose Image Source", isPresented: $showSourceOptions, titleVisibility: .visible) {
+                                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                                    Button("Camera") {
+                                        sourceType = .camera
+                                        showImagePicker = true
+                                    }
+                                }
+                                Button("Gallery") {
+                                    sourceType = .photoLibrary
                                     showImagePicker = true
                                 }
+                                Button("Cancel", role: .cancel) {}
                             }
-                            Button("Gallery") {
-                                sourceType = .photoLibrary
-                                showImagePicker = true
+                            
+                            
+                            // Object List or Error
+                            Group {
+                                if let error = viewModel.isFetchingObjects.1 {
+                                    Text("Server error while fetching the objects.\nNo objects to show.")
+                                        .foregroundColor(.red)
+                                        .multilineTextAlignment(.center)
+                                        .padding()
+                                } else {
+                                    Section(header: Text("Stored Objects")
+                                        .font(.headline)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.horizontal)) {
+                                            List {
+                                                ForEach(viewModel.storedObjects, id: \.id) { item in
+                                                    VStack(alignment: .leading) {
+                                                        Text(item.name ?? "Unnamed")
+                                                            .font(.body)
+                                                        if let capacity = item.data?.capacity {
+                                                            Text("Capacity: \(capacity)")
+                                                                .font(.subheadline)
+                                                                .foregroundColor(.secondary)
+                                                        }
+                                                    }
+                                                }
+                                                .onDelete(perform: viewModel.deleteItems)
+                                            }
+                                            .frame(height: 300)
+                                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        }
+                                }
                             }
-                            Button("Cancel", role: .cancel) {}
+                            // PDF Viewer Link
+                            if let pdfURL = URL(string: viewModel.pdfUrl) {
+                                NavigationLink(destination: PDFKitView(url: pdfURL)) {
+                                    Label("View PDF", systemImage: "square.text.square")
+                                        .font(.headline)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(Color(.systemGray6))
+                                        .cornerRadius(12)
+                                }
+                                .padding(.horizontal)
+                            } else {
+                                Text("Invalid PDF URL")
+                                    .foregroundColor(.gray)
+                            }
+                            
+                            Button(role: .destructive) {
+                                viewModel.signOut()
+                            } label: {
+                                Text("Sign Out")
+                                    .bold()
+                                    .padding(.vertical, 10)
+                                    .frame(maxWidth: .infinity)
+                                    .background(Color.red.opacity(0.1))
+                                    .foregroundColor(.red)
+                                    .cornerRadius(10)
+                            }
+                            .padding(.horizontal)
                         }
-                        
-                        Button(action: {
-                            viewModel.signOut()
-                        }, label: {
-                            Text("Signout")
-                        })
-                        
-                        if let pdfURL = URL(string: viewModel.pdfUrl) {
-                            NavigationLink(destination: PDFKitView(url: pdfURL)) {
-                                Image(systemName: "square.text.square")
-                                    .resizable()
-                                    .frame(width: 50, height: 50)
-                                    .foregroundStyle(.blue)
-                            }
-                        } else {
-                            Text("Invalid PDF URL")
-                                .foregroundColor(.gray)
-                        }
-
+                        .padding()
                     }
-                    
+                    .navigationTitle("Dashboard")
                 }
+                
             } else {
                 GoogleSignInButton {
                     if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
