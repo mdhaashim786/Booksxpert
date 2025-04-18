@@ -60,7 +60,7 @@ class MyViewModel: ObservableObject {
         for object in objects {
             
             let storedObject = PersistentResponse(context: context)
-            storedObject.id = object.id
+            storedObject.id = object.id + UUID().uuidString
             storedObject.name = object.name
             
             if let data = object.data {
